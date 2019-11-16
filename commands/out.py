@@ -20,7 +20,7 @@ source_schema = {
         "ssh_private_key": {"type": "string"},
         "ssh_private_key_passphrase": {"type": "string"},
     },
-    "required": ["host", "ssh_port", "ssh_user", "ssh_private_key"]
+    "required": ["ssh_host", "ssh_port", "ssh_user", "ssh_private_key"]
 }
 
 params_schema = {
