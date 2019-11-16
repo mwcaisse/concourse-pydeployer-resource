@@ -13,12 +13,12 @@ def test_valid_input_passes_validation():
     params = {
         "source": {
             "ssh_host": "192.168.1.1",
-            "ssh_port": "7865",
+            "ssh_port": 7865,
             "ssh_user": "mitchell",
             "ssh_private_key": "BLAH BLAH BLAH",
         },
         "params": {
-            "package": "s3/pydeployer-web.pydist"
+            "package_directory": "s3/"
         }
     }
 

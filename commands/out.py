@@ -6,6 +6,8 @@ import sys
 import io
 import os
 from paramiko import SSHClient
+from paramiko.client import AutoAddPolicy
+from paramiko.rsakey import RSAKey
 from scp import SCPClient
 
 
@@ -15,7 +17,7 @@ source_schema = {
     "type": "object",
     "properties": {
         "ssh_host": {"type": "string"},
-        "ssh_port": {"type": "string"},
+        "ssh_port": {"type": "number"},
         "ssh_user": {"type": "string"},
         "ssh_private_key": {"type": "string"},
         "ssh_private_key_passphrase": {"type": "string"},
@@ -28,7 +30,7 @@ params_schema = {
     "properties": {
         "package_directory": {"type": "string"}
     },
-    "required": ["package"]
+    "required": ["package_directory"]
 
 }
 
@@ -48,17 +50,20 @@ def validate_input_params(input_params):
 
 
 def execute(build_directory, source, params):
-
     # Add some validation to see if we can find the pydist file first?
+
+    # Load up the private key for the connection
+    private_key = RSAKey.from_private_key(io.StringIO(source["ssh_private_key"]),
+                                        password=source.get("ssh_private_key_passphrase"))
 
     # connect to the Server
     ssh = SSHClient()
+    ssh.set_missing_host_key_policy(AutoAddPolicy)
     ssh.connect(
         hostname=source["ssh_host"],
         port=source["ssh_port"],
-        username=source["ssh_username"],
-        passphrase=source.get("ssh_private_key_passphrase"),
-        pkey=io.StringIO(source["ssh_private_key"]),
+        username=source["ssh_user"],
+        pkey=private_key,
         look_for_keys=False,
         allow_agent=False
     )
