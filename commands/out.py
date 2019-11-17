@@ -29,9 +29,10 @@ source_schema = {
 params_schema = {
     "type": "object",
     "properties": {
-        "package_directory": {"type": "string"}
+        "package_directory": {"type": "string"},
+        "version_file": {"type": "string"},
     },
-    "required": ["package_directory"]
+    "required": ["package_directory", "version_file"]
 
 }
 
@@ -94,8 +95,10 @@ def execute(build_directory, source, params):
     # Close out the ssh connection
     ssh.close()
 
+    version = read_version_from_file(params["version_file"])
+
     return {
-        "version": {"version": "test-version-2"}
+        "version": {"version": version}
     }
 
 
@@ -116,6 +119,20 @@ def execute_command(ssh, command, working_directory=None):
 
 def log_output(message, **kwargs):
     print(message, file=sys.stderr, **kwargs)
+
+
+def read_version_from_file(version_file_path):
+    if not os.path.isfile(version_file_path):
+        log_output("Could not find version file")
+        exit(1)
+
+    with open(version_file_path) as version_file:
+        version = version_file.read()
+
+    version.strip()  # remove any trailing / leading whitespace
+    return version
+
+
 
 
 def main():
