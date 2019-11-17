@@ -5,6 +5,7 @@ import json
 import sys
 import io
 import os
+import shutil
 from paramiko import SSHClient
 from paramiko.client import AutoAddPolicy
 from paramiko.rsakey import RSAKey
@@ -53,9 +54,9 @@ def execute(build_directory, source, params):
     # Add some validation to see if we can find the pydist file first?
 
     # Load up the private key for the connection
-    private_key = RSAKey.from_private_key(io.StringIO(source["ssh_private_key"]),
-                                        password=source.get("ssh_private_key_passphrase"))
+    private_key = RSAKey.from_private_key(io.StringIO(source["ssh_private_key"]))
 
+    print("Connecting to {}".format(source["ssh_host"]))
     # connect to the Server
     ssh = SSHClient()
     ssh.set_missing_host_key_policy(AutoAddPolicy)
@@ -71,24 +72,48 @@ def execute(build_directory, source, params):
     # Construct package directory
     package_directory = os.path.join(build_directory, params["package_directory"])
 
+    print("Connected to {}. Copying over artifiacts from: {}".format(source["ssh_host"], package_directory))
+
+    # Before we copy over the file, delete the pydeployer-tmp folder, as SCP's behaviour changes if it already exists
+    # TODO: pydeployer-tmp should be pulled out into a variable and input config
+    execute_command(ssh, "rm -r ~/pydeployer-tmp")
+
     # Copy over the pydist package
     with SCPClient(ssh.get_transport()) as scp:
         scp.put(package_directory, recursive=True, remote_path="~/pydeployer-tmp")
 
+    print("Copied artifacts. Executing deployment")
     # Install the package
     # TODO: Add some validation around running these commands
-    ssh.exec_command("cd ~/pydeployer-tmp")
-    ssh.exec_command("pydeployer deploy *.pydist")
-    # ssh.exec_command("rm -r *")
+    execute_command(ssh, "pydeployer deploy *.pydist", working_directory="~/pydeployer-tmp")
 
+    print("Deployment done. Terminating SSH connection.")
     # Close out the ssh connection
     ssh.close()
+
+    print("Terminated.")
 
     return {
         "version": {"ref": "test-version-1"},
         "metadata": [
         ]
     }
+
+
+def execute_command(ssh, command, working_directory=None):
+    if working_directory:
+        command = "cd {working_directory}; {command}".format(working_directory=working_directory, command=command
+                                                             )
+    stdin, stdout, stderr = ssh.exec_command(command, get_pty=True)
+
+    stdout_str = stdout.read().decode("UTF-8")
+    stderr_str = stderr.read().decode("UTF-8")
+
+    if stdout_str:
+        print(stdout_str)
+    if stderr_str:
+        print(stderr_str)
+
 
 
 def main(args):

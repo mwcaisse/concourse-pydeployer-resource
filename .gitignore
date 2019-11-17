@@ -102,3 +102,5 @@ ENV/
 
 # Pycharm files
 .idea
+
+test_out.py

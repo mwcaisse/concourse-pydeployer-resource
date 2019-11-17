@@ -1,4 +1,5 @@
 import pytest
+import re
 
 from jsonschema.validators import Draft7Validator
 from jsonschema.exceptions import ValidationError
