@@ -5,7 +5,7 @@ import json
 import sys
 import io
 import os
-import shutil
+import time
 from paramiko import SSHClient
 from paramiko.client import AutoAddPolicy
 from paramiko.rsakey import RSAKey
@@ -56,7 +56,7 @@ def execute(build_directory, source, params):
     # Load up the private key for the connection
     private_key = RSAKey.from_private_key(io.StringIO(source["ssh_private_key"]))
 
-    print("Connecting to {}".format(source["ssh_host"]))
+    log_output("Connecting to {}".format(source["ssh_host"]))
     # connect to the Server
     ssh = SSHClient()
     ssh.set_missing_host_key_policy(AutoAddPolicy)
@@ -72,7 +72,7 @@ def execute(build_directory, source, params):
     # Construct package directory
     package_directory = os.path.join(build_directory, params["package_directory"])
 
-    print("Connected to {}. Copying over artifiacts from: {}".format(source["ssh_host"], package_directory))
+    log_output("Connected to {}. Copying over artifiacts from: {}".format(source["ssh_host"], package_directory))
 
     # Before we copy over the file, delete the pydeployer-tmp folder, as SCP's behaviour changes if it already exists
     # TODO: pydeployer-tmp should be pulled out into a variable and input config
@@ -82,21 +82,18 @@ def execute(build_directory, source, params):
     with SCPClient(ssh.get_transport()) as scp:
         scp.put(package_directory, recursive=True, remote_path="~/pydeployer-tmp")
 
-    print("Copied artifacts. Executing deployment")
+    log_output("Copied artifacts. Executing deployment")
     # Install the package
     # TODO: Add some validation around running these commands
     execute_command(ssh, "pydeployer deploy *.pydist", working_directory="~/pydeployer-tmp")
 
-    print("Deployment done. Terminating SSH connection.")
+    log_output("Deployment done. Terminating SSH connection.")
     # Close out the ssh connection
     ssh.close()
 
-    print("Terminated.")
-
+    log_output("Terminated.")
     return {
-        "version": {"ref": "test-version-1"},
-        "metadata": [
-        ]
+        "version": {"version": "test-version-2"}
     }
 
 
@@ -110,32 +107,25 @@ def execute_command(ssh, command, working_directory=None):
     stderr_str = stderr.read().decode("UTF-8")
 
     if stdout_str:
-        print(stdout_str)
+        log_output(stdout_str)
     if stderr_str:
-        print(stderr_str)
+        log_output(stderr_str)
 
 
+def log_output(message, **kwargs):
+    print(message, file=sys.stderr, **kwargs)
 
-def main(args):
+
+def main():
+    build_directory = sys.argv[1]
     input_params = json.load(sys.stdin)
     validate_input_params(input_params)
 
-    output = execute(args.build_directory, input_params["source"], input_params["params"])
+    output = execute(build_directory, input_params["source"], input_params["params"])
     print(json.dumps(output))
-
-    return 0
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Deploys an application to a server using pydeployer via concourse")
-    parser.add_argument("build_directory", help="The job's build directory") # build directory
+    main()
 
-    args = parser.parse_args()
-
-    if not args.build_directory:
-        print("Build directory is required")
-        exit(2)
-    else:
-        res = main(args)
-        exit(res)
 
