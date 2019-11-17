@@ -74,7 +74,7 @@ def test_read_file_version():
     with open(version_file_path, "w") as version_test_file:
         version_test_file.write(expected_version)
 
-    actual_version = read_version_from_file(version_file_path)
+    actual_version = read_version_from_file("./", version_file_path)
 
     os.remove(version_file_path)
     assert actual_version == expected_version

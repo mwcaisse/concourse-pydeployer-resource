@@ -95,7 +95,7 @@ def execute(build_directory, source, params):
     # Close out the ssh connection
     ssh.close()
 
-    version = read_version_from_file(params["version_file"])
+    version = read_version_from_file(build_directory, params["version_file"])
 
     return {
         "version": {"version": version}
@@ -121,7 +121,8 @@ def log_output(message, **kwargs):
     print(message, file=sys.stderr, **kwargs)
 
 
-def read_version_from_file(version_file_path):
+def read_version_from_file(build_directory, version_file_path):
+    version_file_path = os.path.join(build_directory, version_file_path)
     if not os.path.isfile(version_file_path):
         log_output("Could not find version file")
         exit(1)
