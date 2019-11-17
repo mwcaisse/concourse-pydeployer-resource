@@ -56,6 +56,9 @@ def execute(build_directory, source, params):
     # Load up the private key for the connection
     private_key = RSAKey.from_private_key(io.StringIO(source["ssh_private_key"]))
 
+    # Construct package directory
+    package_directory = os.path.join(build_directory, params["package_directory"])
+
     log_output("Connecting to {}".format(source["ssh_host"]))
     # connect to the Server
     ssh = SSHClient()
@@ -69,17 +72,17 @@ def execute(build_directory, source, params):
         allow_agent=False
     )
 
-    # Construct package directory
-    package_directory = os.path.join(build_directory, params["package_directory"])
-
     log_output("Connected to {}. Copying over artifiacts from: {}".format(source["ssh_host"], package_directory))
 
     # Before we copy over the file, delete the pydeployer-tmp folder, as SCP's behaviour changes if it already exists
     # TODO: pydeployer-tmp should be pulled out into a variable and input config
     execute_command(ssh, "rm -r ~/pydeployer-tmp")
 
+    def scp_progress(filename, size, sent):
+        sys.stderr.write("%s's progress: %.2f%%  \r" % (filename, float(sent)/float(size)*100))
+
     # Copy over the pydist package
-    with SCPClient(ssh.get_transport()) as scp:
+    with SCPClient(ssh.get_transport(), progress=scp_progress) as scp:
         scp.put(package_directory, recursive=True, remote_path="~/pydeployer-tmp")
 
     log_output("Copied artifacts. Executing deployment")
@@ -91,7 +94,6 @@ def execute(build_directory, source, params):
     # Close out the ssh connection
     ssh.close()
 
-    log_output("Terminated.")
     return {
         "version": {"version": "test-version-2"}
     }
