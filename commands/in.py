@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
 
+import json
+
 if __name__ == "__main__":
-    exit(0)
+    print(json.dumps({
+        "version:": {"version": "NaN"}
+    }))
+
